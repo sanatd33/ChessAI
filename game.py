@@ -27,23 +27,23 @@ def update_screen(win, curr_piece):
 board = Board()
 
 for i in range(8):
-	board.piece_at(i, 1) = Piece((i, 1), Color.WHITE, Pieces.PAWN)
-	board.piece_at(i, 6) = Piece((i, 6), Color.BLACK, Pieces.PAWN)
+	board.set_piece_at((i, 1), Piece((i, 1), Color.WHITE, Pieces.PAWN))
+	board.set_piece_at((i, 6), Piece((i, 6), Color.BLACK, Pieces.PAWN))
 	if (i == 0 or i == 7):
-		board.piece_at(i, 0) = Piece((i, 0), Color.WHITE, Pieces.ROOK)
-		board.piece_at(i, 7) = Piece((i, 7), Color.BLACK, Pieces.ROOK)
+		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.ROOK))
+		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.ROOK))
 	elif (i == 1 or i == 6):
-		board.piece_at(i, 0) = Piece((i, 0), Color.WHITE, Pieces.KNIGHT)
-		board.piece_at(i, 7) = Piece((i, 7), Color.BLACK, Pieces.KNIGHT)
+		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KNIGHT))
+		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KNIGHT))
 	elif (i == 2 or i == 5):
-		board.piece_at(i, 0) = Piece((i, 0), Color.WHITE, Pieces.BISHOP)
-		board.piece_at(i, 7) = Piece((i, 7), Color.BLACK, Pieces.BISHOP)
+		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.BISHOP))
+		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.BISHOP))
 	elif (i == 3):
-		board.piece_at(i, 0) = Piece((i, 0), Color.WHITE, Pieces.QUEEN)
-		board.piece_at(i, 7) = Piece((i, 7), Color.BLACK, Pieces.QUEEN)
+		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.QUEEN))
+		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.QUEEN))
 	elif (i == 4):
-		board.piece_at(i, 0) = Piece((i, 0), Color.WHITE, Pieces.KING)
-		board.piece_at(i, 7) = Piece((i, 7), Color.BLACK, Pieces.KING)
+		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KING))
+		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KING))
 
 win = GraphWin(width = 1000, height = 1000)
 update_screen(win, None)
@@ -76,6 +76,10 @@ while (key != 'Escape'):
 				curr_turn = Color.WHITE
 			if (board.is_checkmated(curr_turn)):
 				print(curr_turn.name + " loses")
+				update_screen(win, curr_piece)
+				break
+			if (board.is_stalemated(curr_turn)):
+				print("Stalemate")
 				update_screen(win, curr_piece)
 				break
 			update_screen(win, curr_piece)

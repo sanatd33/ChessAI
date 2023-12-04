@@ -58,12 +58,25 @@ class Board:
 						return False
 		return True
 
-	def piece_at(self, position):
-		return self.board[position[0]][position[1]]
+	def is_stalemated(self, color):
+		if (color == Color.BLACK):
+			if (self.black_in_check):
+				return False
+		else:
+			if (self.white_in_check):
+				return False
+		for row in self.board:
+			for item in row:
+				if (item and item.color == color):
+					if len(item.generate_valid_moves(self)) > 0:
+						return False
+		return True
 
 	def piece_at(self, x, y):
 		return self.board[x][y]
 
+	def set_piece_at(self, position, piece):
+		self.board[position[0]][position[1]] = piece
 	def __deepcopy__(self, memo):
 		if (self.is_copy):
 			return self

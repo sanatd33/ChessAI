@@ -1,4 +1,4 @@
 A Chess-playing AI
 TODO:
-- Replicate Chess
+- Replicate Chess ✅
 - Train an AI to play it
