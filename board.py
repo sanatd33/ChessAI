@@ -59,17 +59,63 @@ class Board:
 		return True
 
 	def is_stalemated(self, color):
+		white_mating_material = True
+		black_mating_material = True
+
+		num_king = 0
+		num_bishop = 0
+		num_knight = 0
+		num_other = 0
+		for item in self.white_pieces:
+			if (item.piece == Pieces.KING):
+				num_king += 1
+			elif (item.piece == Pieces.BISHOP):
+				num_bishop += 1
+			elif (item.piece == Pieces.KNIGHT):
+				num_knight += 1
+			else:
+				num_other += 1
+
+		if (num_other == 0 and num_king == 1 and (num_bishop + num_knight) <= 1):
+			white_mating_material = False
+
+		num_king = 0
+		num_bishop = 0
+		num_knight = 0
+		num_other = 0
+		for item in self.black_pieces:
+			if (item.piece == Pieces.KING):
+				num_king += 1
+			elif (item.piece == Pieces.BISHOP):
+				num_bishop += 1
+			elif (item.piece == Pieces.KNIGHT):
+				num_knight += 1
+			else:
+				num_other += 1
+
+		if (num_other == 0 and num_king == 1 and (num_bishop + num_knight) <= 1):
+			black_mating_material = False
+
+		if (not white_mating_material and not black_mating_material):
+			return True
+
 		if (color == Color.BLACK):
 			if (self.black_in_check):
 				return False
-		else:
-			if (self.white_in_check):
-				return False
-		for row in self.board:
-			for item in row:
+
+			for item in self.black_pieces:
 				if (item and item.color == color):
 					if len(item.generate_valid_moves(self)) > 0:
 						return False
+		else:
+			if (self.white_in_check):
+				return False
+
+			for item in self.white_pieces:
+				if (item and item.color == color):
+					if len(item.generate_valid_moves(self)) > 0:
+						return False
+				
 		return True
 
 	def piece_at(self, x, y):

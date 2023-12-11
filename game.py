@@ -2,9 +2,10 @@ from piece import *
 from graphics import *
 from board import *
 from enums import *
+from neural import DQNAgent, get_current_state, explore_random_move, take_action
 
 
-def update_screen(win, curr_piece):
+def update_screen(win, board, curr_piece):
 	for i in range(8):
 		for j in range(8):
 			square = Rectangle(Point(i * 125, j * 125), Point(i * 125 + 125, j * 125 + 125))
@@ -24,66 +25,97 @@ def update_screen(win, curr_piece):
 				image = Image(Point(x_pos, y_pos), "images/" + board.piece_at(i, 8-j-1).piece.name.lower() + "_" + board.piece_at(i, 8-j-1).color.name.lower() + ".png")
 				image.draw(win)
 
-board = Board()
+def main():
+	board = Board()
 
-for i in range(8):
-	board.set_piece_at((i, 1), Piece((i, 1), Color.WHITE, Pieces.PAWN))
-	board.set_piece_at((i, 6), Piece((i, 6), Color.BLACK, Pieces.PAWN))
-	if (i == 0 or i == 7):
-		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.ROOK))
-		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.ROOK))
-	elif (i == 1 or i == 6):
-		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KNIGHT))
-		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KNIGHT))
-	elif (i == 2 or i == 5):
-		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.BISHOP))
-		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.BISHOP))
-	elif (i == 3):
-		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.QUEEN))
-		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.QUEEN))
-	elif (i == 4):
-		board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KING))
-		board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KING))
+	for i in range(8):
+		board.set_piece_at((i, 1), Piece((i, 1), Color.WHITE, Pieces.PAWN))
+		board.set_piece_at((i, 6), Piece((i, 6), Color.BLACK, Pieces.PAWN))
+		if (i == 0 or i == 7):
+			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.ROOK))
+			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.ROOK))
+		elif (i == 1 or i == 6):
+			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KNIGHT))
+			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KNIGHT))
+		elif (i == 2 or i == 5):
+			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.BISHOP))
+			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.BISHOP))
+		elif (i == 3):
+			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.QUEEN))
+			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.QUEEN))
+		elif (i == 4):
+			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KING))
+			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KING))
 
-win = GraphWin(width = 1000, height = 1000)
-update_screen(win, None)
-key = ""
-curr_piece = None
-curr_turn = Color.WHITE
-while (key != 'Escape'):
-	mouse = win.checkMouse()
-	key = win.checkKey()
+	state_size = 8 * 8 * 3  # Assuming your encode_state function returns a flattened representation
+	action_size = 8*8*8*8  # Assuming your action space is represented by a pair of indices
 
-	if (mouse):
-		x = int(mouse.getX() / 125)
-		y = 7 - int(mouse.getY() / 125)
-		if (not curr_piece and (not board.piece_at(x, y) or board.piece_at(x, y).color == curr_turn)):
-			curr_piece = board.piece_at(x, y)
-			update_screen(win, curr_piece)
-		elif (curr_piece):
-			if (not curr_piece.is_valid_move((x, y), board)):
-				if (board.piece_at(x, y) and board.piece_at(x, y).color == curr_turn):
-					curr_piece = board.piece_at(x, y)
-					update_screen(win, curr_piece)
-				continue
-			elif (curr_piece.results_in_check((x, y), board)):
-				continue
-			board.move(curr_piece, (x, y))
-			curr_piece = None
+	agent = DQNAgent(state_size, action_size)
+	agent.model.build((action_size, state_size))
+	agent.model.load_weights("chess_ai2.h5")
+
+	win = GraphWin(width = 1000, height = 1000)
+	update_screen(win, board, None)
+	key = ""
+	curr_piece = None
+	curr_turn = Color.WHITE
+	while (key != 'Escape'):
+		if (curr_turn == Color.BLACK):
+			state = get_current_state(board)
+			action = agent.choose_action(state, explore_random_move(curr_turn, board))
+			next_state, reward, game_over = take_action(board, action, curr_turn)
 			if (curr_turn == Color.WHITE):
 				curr_turn = Color.BLACK
 			else:
 				curr_turn = Color.WHITE
 			if (board.is_checkmated(curr_turn)):
 				print(curr_turn.name + " loses")
-				update_screen(win, curr_piece)
+				update_screen(win, board, curr_piece)
 				break
 			if (board.is_stalemated(curr_turn)):
 				print("Stalemate")
-				update_screen(win, curr_piece)
+				update_screen(win, board, curr_piece)
 				break
-			update_screen(win, curr_piece)
-while (key != 'Escape'):
-	key = win.checkKey()
-sys.exit()
-win.close()
+			update_screen(win, board, curr_piece)
+			continue
+
+
+		mouse = win.checkMouse()
+		key = win.checkKey()
+
+		if (mouse):
+			x = int(mouse.getX() / 125)
+			y = 7 - int(mouse.getY() / 125)
+			if (not curr_piece and (not board.piece_at(x, y) or board.piece_at(x, y).color == curr_turn)):
+				curr_piece = board.piece_at(x, y)
+				update_screen(win, board, curr_piece)
+			elif (curr_piece):
+				if (not curr_piece.is_valid_move((x, y), board)):
+					if (board.piece_at(x, y) and board.piece_at(x, y).color == curr_turn):
+						curr_piece = board.piece_at(x, y)
+						update_screen(win, board, curr_piece)
+					continue
+				elif (curr_piece.results_in_check((x, y), board)):
+					continue
+				board.move(curr_piece, (x, y))
+				curr_piece = None
+				if (curr_turn == Color.WHITE):
+					curr_turn = Color.BLACK
+				else:
+					curr_turn = Color.WHITE
+				if (board.is_checkmated(curr_turn)):
+					print(curr_turn.name + " loses")
+					update_screen(win, board, curr_piece)
+					break
+				if (board.is_stalemated(curr_turn)):
+					print("Stalemate")
+					update_screen(win, board, curr_piece)
+					break
+				update_screen(win, board, curr_piece)
+	while (key != 'Escape'):
+		key = win.checkKey()
+	sys.exit()
+	win.close()
+
+if (__name__ == "__main__"):
+	main()
