@@ -2,7 +2,10 @@ from piece import *
 from graphics import *
 from board import *
 from enums import *
-from neural import DQNAgent, get_current_state, explore_random_move, take_action
+# from neural import DQNAgent, get_current_state, explore_moves, take_action
+from minimax import find_best_move, apply_move, find_best_move_parallel
+import cProfile
+import yappi
 
 
 def update_screen(win, board, curr_piece):
@@ -25,8 +28,9 @@ def update_screen(win, board, curr_piece):
 				image = Image(Point(x_pos, y_pos), "images/" + board.piece_at(i, 8-j-1).piece.name.lower() + "_" + board.piece_at(i, 8-j-1).color.name.lower() + ".png")
 				image.draw(win)
 
-def main():
+def initialize_chessboard():
 	board = Board()
+	board.board = [[None for x in range(8)] for y in range(8)]
 
 	for i in range(8):
 		board.set_piece_at((i, 1), Piece((i, 1), Color.WHITE, Pieces.PAWN))
@@ -47,23 +51,40 @@ def main():
 			board.set_piece_at((i, 0), Piece((i, 0), Color.WHITE, Pieces.KING))
 			board.set_piece_at((i, 7), Piece((i, 7), Color.BLACK, Pieces.KING))
 
-	state_size = 8 * 8 * 3  # Assuming your encode_state function returns a flattened representation
-	action_size = 8*8*8*8  # Assuming your action space is represented by a pair of indices
+	board.update_board()
+	return board
 
-	agent = DQNAgent(state_size, action_size)
-	agent.model.build((action_size, state_size))
-	agent.model.load_weights("chess_ai2.h5")
+def main():
+	board = initialize_chessboard()
+
+	# state_size = 8 * 8 * 3  # Assuming your encode_state function returns a flattened representation
+	# action_size = 8*8*8*8  # Assuming your action space is represented by a pair of indices
+
+	# agent = DQNAgent(state_size, action_size)
+	# agent.model.build((action_size, state_size))
+	# agent.model.load_weights("chess_ai2.h5")
 
 	win = GraphWin(width = 1000, height = 1000)
 	update_screen(win, board, None)
 	key = ""
 	curr_piece = None
 	curr_turn = Color.WHITE
+
+	i = 0
+
+	profiler = cProfile.Profile()
 	while (key != 'Escape'):
 		if (curr_turn == Color.BLACK):
-			state = get_current_state(board)
-			action = agent.choose_action(state, explore_random_move(curr_turn, board))
-			next_state, reward, game_over = take_action(board, action, curr_turn)
+			# state = get_current_state(board)
+			# action = agent.choose_action(state, explore_moves(curr_turn, board))
+			# next_state, reward, game_over = take_action(board, action, curr_turn)
+
+			profiler.enable()
+			move = find_best_move_parallel(board, 5, curr_turn)
+			profiler.disable()
+			profiler.dump_stats(f'profiles/profile_data_{i+1}.prof')
+			apply_move(board, move)
+
 			if (curr_turn == Color.WHITE):
 				curr_turn = Color.BLACK
 			else:
@@ -77,6 +98,7 @@ def main():
 				update_screen(win, board, curr_piece)
 				break
 			update_screen(win, board, curr_piece)
+			i += 1
 			continue
 
 
@@ -118,4 +140,13 @@ def main():
 	win.close()
 
 if (__name__ == "__main__"):
+	# board = initialize_chessboard()
+
+	# yappi.set_clock_type("wall")
+	# yappi.start()
+	# find_best_move(board, 5, Color.WHITE)
+
+	# yappi.stop()
+	# yappi.get_func_stats().print_all()
+	# yappi.get_thread_stats().print_all()
 	main()

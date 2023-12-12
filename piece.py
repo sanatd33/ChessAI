@@ -8,6 +8,7 @@ class Piece:
 	piece = Pieces.PAWN
 	has_moved = False
 	is_copy = False
+	depth = 0
 
 	def __init__(self, position, color, piece, has_moved = None):
 		self.position = position
@@ -47,8 +48,9 @@ class Piece:
 			board.set_piece_at(new_position, self)
 			return True
 
-	def is_valid_target(self, new_position):
-		return not (new_position[0] < 0 or new_position[0] > 7 or new_position[1] < 0 or new_position[1] > 7)
+	def is_valid_target(self, new_position, board):
+		return not (new_position[0] < 0 or new_position[0] > 7 or new_position[1] < 0 or new_position[1] > 7 or self.position == new_position or 
+				(board.piece_at(*new_position) and board.piece_at(*new_position).color == self.color))
 
 	def generate_valid_moves(self, board):
 		sol = []
@@ -62,11 +64,11 @@ class Piece:
 					new_position = (self.position[0], self.position[1] + 2)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
-				if (self.is_valid_target((self.position[0] - 1, self.position[1] + 1)) and board.piece_at(self.position[0] - 1, self.position[1] + 1) and board.piece_at(self.position[0] - 1, self.position[1] + 1).color == Color.BLACK):
+				if (self.is_valid_target((self.position[0] - 1, self.position[1] + 1), board) and board.piece_at(self.position[0] - 1, self.position[1] + 1) and board.piece_at(self.position[0] - 1, self.position[1] + 1).color == Color.BLACK):
 					new_position = (self.position[0] - 1, self.position[1] + 1)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
-				if (self.is_valid_target((self.position[0] + 1, self.position[1] + 1)) and board.piece_at(self.position[0] + 1, self.position[1] + 1) and board.piece_at(self.position[0] + 1, self.position[1] + 1).color == Color.BLACK):
+				if (self.is_valid_target((self.position[0] + 1, self.position[1] + 1), board) and board.piece_at(self.position[0] + 1, self.position[1] + 1) and board.piece_at(self.position[0] + 1, self.position[1] + 1).color == Color.BLACK):
 					new_position = (self.position[0] + 1, self.position[1] + 1)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
@@ -79,11 +81,11 @@ class Piece:
 					new_position = (self.position[0], self.position[1] - 2)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
-				if (self.is_valid_target((self.position[0] - 1, self.position[1] - 1)) and board.piece_at(self.position[0] - 1, self.position[1] - 1) and board.piece_at(self.position[0] - 1, self.position[1] - 1).color == Color.WHITE):
+				if (self.is_valid_target((self.position[0] - 1, self.position[1] - 1), board) and board.piece_at(self.position[0] - 1, self.position[1] - 1) and board.piece_at(self.position[0] - 1, self.position[1] - 1).color == Color.WHITE):
 					new_position = (self.position[0] - 1, self.position[1] - 1)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
-				if (self.is_valid_target((self.position[0] + 1, self.position[1] - 1)) and board.piece_at(self.position[0] + 1, self.position[1] - 1) and board.piece_at(self.position[0] + 1, self.position[1] - 1).color == Color.WHITE):
+				if (self.is_valid_target((self.position[0] + 1, self.position[1] - 1), board) and board.piece_at(self.position[0] + 1, self.position[1] - 1) and board.piece_at(self.position[0] + 1, self.position[1] - 1).color == Color.WHITE):
 					new_position = (self.position[0] + 1, self.position[1] - 1)
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
@@ -93,7 +95,7 @@ class Piece:
 			for direction in directions:
 				for i in range(1, 8):
 					new_position = (self.position[0] + i * direction[0], self.position[1] + i * direction[1])
-					if (not self.is_valid_target(new_position)):
+					if (not self.is_valid_target(new_position, board)):
 						break
 					if (not board.piece_at(*new_position)):
 						if (not self.results_in_check(new_position, board)):
@@ -108,7 +110,7 @@ class Piece:
 			knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
 			for move in knight_moves:
 				new_position = (self.position[0] + move[0], self.position[1] + move[1])
-				if self.is_valid_target(new_position) and (not board.piece_at(*new_position) or board.piece_at(*new_position).color != self.color):
+				if self.is_valid_target(new_position, board) and (not board.piece_at(*new_position) or board.piece_at(*new_position).color != self.color):
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
 
@@ -117,7 +119,7 @@ class Piece:
 			for direction in directions:
 				for i in range(1, 8):
 					new_position = (self.position[0] + i * direction[0], self.position[1] + i * direction[1])
-					if not self.is_valid_target(new_position):
+					if not self.is_valid_target(new_position, board):
 						break
 					if board.piece_at(*new_position) is None:
 						if (not self.results_in_check(new_position, board)):
@@ -133,7 +135,7 @@ class Piece:
 			for direction in directions:
 				for i in range(1, 8):
 					new_position = (self.position[0] + i * direction[0], self.position[1] + i * direction[1])
-					if not self.is_valid_target(new_position):
+					if not self.is_valid_target(new_position, board):
 						break
 					if board.piece_at(*new_position) is None:
 						if (not self.results_in_check(new_position, board)):
@@ -148,48 +150,54 @@ class Piece:
 			directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 			for direction in directions:
 				new_position = (self.position[0] + direction[0], self.position[1] + direction[1])
-				if self.is_valid_target(new_position) and (board.piece_at(*new_position) is None or board.piece_at(*new_position).color != self.color):
+				if self.is_valid_target(new_position, board) and (board.piece_at(*new_position) is None or board.piece_at(*new_position).color != self.color):
 					if (not self.results_in_check(new_position, board)):
 						sol.append(new_position)
 		return sol
 	def is_valid_move(self, new_position, board):
-		if (not self.is_valid_target(new_position) or self.position == new_position):
+		if (not self.is_valid_target(new_position, board) or (self.position[0] == new_position[0] and self.position[1] == new_position[1])):
 				return False
+		sol = False
 		if (self.piece == Pieces.PAWN):
 			if (self.color == Color.WHITE):
 				if (new_position[1] == 1 + self.position[1] and new_position[0] == self.position[0] and not board.piece_at(*new_position)):
-					return True
+					sol = True
 				elif (new_position[1] == 2 + self.position[1] and new_position[0] == self.position[0] and self.position[1] == 1 and not board.piece_at(*new_position)):
-					return True
-				elif (new_position[1] == 1 + self.position[1] and abs(new_position[0] - self.position[0]) == 1 and board.piece_at(*new_position).color == Color.BLACK):
-					return True
+					sol = True
+				elif (new_position[1] == 1 + self.position[1] and abs(new_position[0] - self.position[0]) == 1 and board.piece_at(*new_position) and board.piece_at(*new_position).color == Color.BLACK):
+					sol = True
 			if (self.color == Color.BLACK):
 				if (new_position[1] == self.position[1] - 1 and new_position[0] == self.position[0] and not board.piece_at(*new_position)):
-					return True
+					sol = True
 				elif (new_position[1] == self.position[1] - 2 and new_position[0] == self.position[0] and self.position[1] == 6 and not board.piece_at(*new_position)):
-					return True
-				elif (new_position[1] == self.position[1] - 1 and abs(new_position[0] - self.position[0]) == 1 and board.piece_at(*new_position).color == Color.WHITE):
-					return True
+					sol = True
+				elif (new_position[1] == self.position[1] - 1 and abs(new_position[0] - self.position[0]) == 1 and board.piece_at(*new_position) and board.piece_at(*new_position).color == Color.WHITE):
+					sol = True
 
 		elif self.piece == Pieces.BISHOP:
 			if abs(new_position[0] - self.position[0]) == abs(new_position[1] - self.position[1]):
-				return self.check_path_clear(new_position, board)
-			return False
+				sol = self.check_path_clear(new_position, board)
 
 		elif self.piece == Pieces.KNIGHT:
-			delta_x = abs(new_position[0] - self.position[0])
-			delta_y = abs(new_position[1] - self.position[1])
-			return (delta_x == 2 and delta_y == 1) or (delta_x == 1 and delta_y == 2)
+			if (board.piece_at(*new_position)):
+				if (self.color == board.piece_at(*new_position).color):
+					sol = False
+				else:
+					delta_x = abs(new_position[0] - self.position[0])
+					delta_y = abs(new_position[1] - self.position[1])
+					sol = (delta_x == 2 and delta_y == 1) or (delta_x == 1 and delta_y == 2)
+			else:		
+				delta_x = abs(new_position[0] - self.position[0])
+				delta_y = abs(new_position[1] - self.position[1])
+				sol = (delta_x == 2 and delta_y == 1) or (delta_x == 1 and delta_y == 2)
 
 		elif self.piece == Pieces.ROOK:
 			if new_position[0] == self.position[0] or new_position[1] == self.position[1]:
-				return self.check_path_clear(new_position, board)
-			return False
+				sol = self.check_path_clear(new_position, board)
 
 		elif self.piece == Pieces.QUEEN:
 			if new_position[0] == self.position[0] or new_position[1] == self.position[1] or abs(new_position[0] - self.position[0]) == abs(new_position[1] - self.position[1]):
-				return self.check_path_clear(new_position, board)
-			return False
+				sol = self.check_path_clear(new_position, board)
 
 		elif self.piece == Pieces.KING:
 			delta_x = abs(new_position[0] - self.position[0])
@@ -202,11 +210,15 @@ class Piece:
 				can_castle = can_castle and not board.black_in_check			
 			can_castle = can_castle and self.check_path_castle(new_position, board)
 
-			return (delta_x <= 1 and delta_y <= 1) or can_castle
+			sol = (delta_x <= 1 and delta_y <= 1) or can_castle
 
-		return False
+		return sol and not (self.depth == 0 and self.results_in_check(new_position, board))
 
 	def check_path_clear(self, new_position, board):
+		if (board.piece_at(*new_position)):
+			if (self.color == board.piece_at(*new_position).color):
+				return False
+
 		delta_x = 0 if new_position[0] == self.position[0] else (1 if new_position[0] > self.position[0] else -1)
 		delta_y = 0 if new_position[1] == self.position[1] else (1 if new_position[1] > self.position[1] else -1)
 
@@ -239,21 +251,37 @@ class Piece:
 				return False
 			return True
 		else:
-			board_cpy = copy.deepcopy(board)
+			# board_cpy = copy.deepcopy(board)
+			# print(f"Move: {(self.position, new_position)}")
 			self_cpy = copy.deepcopy(self)
-			board_cpy.move(self_cpy, new_position)
-			if (self.color == Color.WHITE and not board_cpy.white_in_check):
-				return False
-			elif (self.color == Color.BLACK and not board_cpy.black_in_check):
-				return False
-			return True
+			# print("Before test")
+			# print(board)
+			# print("I am adding to the stack in piece line 265")
+
+			board.move_for_check(self_cpy, new_position)
+			# print("After test")
+			# print(board)
+			sol = True
+			if (self.color == Color.WHITE and not board.white_in_check):
+				sol = False
+			elif (self.color == Color.BLACK and not board.black_in_check):
+				sol = False
+
+			# print("I am calling undo in piece line 265")
+			board = board.undo_last_move()
+			# if (undo):
+				# board = undo
+			# print("Reverted")
+			# print(board)
+			return sol
 
 	def __deepcopy__(self, memo):
-		if (self.is_copy):
-			return self
+		# if (self.is_copy):
+		# 	return self
 		new_piece = self.__class__(self.position, self.color, self.piece)
 		new_piece.has_moved = self.has_moved
-		new_piece.is_copy = True
+		new_piece.is_copy = False
+		new_piece.depth = self.depth + 1
 		return new_piece
 
 

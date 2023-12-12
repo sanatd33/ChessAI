@@ -11,16 +11,69 @@ class Board:
 	white_pieces = []
 	is_copy = False
 
+	def __init__(self):
+		self.moves = []
+
 	def move(self, piece, new_pos):
+		start_pos = piece.position
+		start_piece = deepcopy(piece)
+		end_pos = new_pos
+		end_piece = deepcopy(self.piece_at(*end_pos))
+		white_check = self.white_in_check
+		black_check = self.black_in_check
 		if (piece.move(new_pos, self)):
 			self.update_board()
-			if (piece.piece == Pieces.KING):
-				if (piece.color == Color.WHITE):
-					self.white_king = new_pos
-				else:
-					self.black_king = new_pos
+
+			if (piece.color == Color.WHITE):
+				self.black_in_check = self.in_check(Color.BLACK)
+			else:
+				self.white_in_check = self.in_check(Color.WHITE)
+
+			self.moves.append((start_pos, start_piece, end_pos, end_piece, white_check, black_check))
+			# print(self.moves)
+
+	def move_for_check(self, piece, new_pos):
+		start_pos = piece.position
+		start_piece = deepcopy(piece)
+		end_pos = new_pos
+		end_piece = deepcopy(self.piece_at(*end_pos))
+		white_check = self.white_in_check
+		black_check = self.black_in_check
+	
+		piece.has_moved = True
+
+		self.set_piece_at(piece.position, None)
+		piece.position = new_pos
+		if (piece.piece == Pieces.PAWN and ((piece.color == Color.WHITE and new_pos[1] == 7) or (piece.color == Color.BLACK and new_pos[1] == 0))):
+			piece.piece = Pieces.QUEEN
+		self.set_piece_at(new_pos, piece)
+
+		self.update_board()
+
+		if (piece.color == Color.BLACK):
 			self.black_in_check = self.in_check(Color.BLACK)
+		else:
 			self.white_in_check = self.in_check(Color.WHITE)
+
+		self.moves.append((start_pos, start_piece, end_pos, end_piece, white_check, black_check))
+		# print(self.moves)
+
+	def undo_last_move(self):
+		if (self.moves):
+			# print("Undo is being called")
+			# print(f"Before: {self.moves}")
+			start_pos, start_piece, end_pos, end_piece, white_check, black_check = self.moves.pop()
+
+			self.set_piece_at(start_pos, start_piece)
+			self.set_piece_at(end_pos, end_piece)
+
+
+			self.update_board()
+
+			self.black_in_check = white_check
+			self.white_in_check = black_check
+			# print(f"After: {self.moves}")
+			return self
 
 	def update_board(self):
 		self.black_pieces = []
@@ -29,9 +82,15 @@ class Board:
 			for item in row:
 				if (item and item.color == Color.WHITE):
 					self.white_pieces.append(item)
+
+					if (item.piece == Pieces.KING):
+						self.white_king = item.position
 				elif (item and item.color == Color.BLACK):
 					self.black_pieces.append(item)
-
+		
+					if (item.piece == Pieces.KING):
+						self.black_king = item.position
+	
 	def in_check(self, color):
 		if (color == Color.WHITE):
 			for piece in self.black_pieces:
@@ -123,9 +182,10 @@ class Board:
 
 	def set_piece_at(self, position, piece):
 		self.board[position[0]][position[1]] = piece
+
 	def __deepcopy__(self, memo):
-		if (self.is_copy):
-			return self
+		# if (self.is_copy):
+		# 	return self
 		cls = self.__class__
 		result = cls.__new__(cls)
 		memo[id(self)] = result
@@ -141,6 +201,7 @@ class Board:
 		result.black_pieces = deepcopy(self.black_pieces, memo)
 		result.white_pieces = deepcopy(self.white_pieces, memo)
 		result.is_copy = True
+		result.moves = []
 
 		return result
 

@@ -115,57 +115,124 @@ def apply_move(board, action):
 	board.move(board.piece_at(*start_position), end_position)
 
 def calculate_reward(board, color):
-	reward = 0
+	pawn_table = [[0,  0,  0,  0,  0,  0,  0,  0],
+					[5, 10, 10,-20,-20, 10, 10,  5],
+					[5, -5,-10,  0,  0,-10, -5,  5],
+					[0,  0,  0, 20, 20,  0,  0,  0],
+					[5,  5, 10, 25, 25, 10,  5,  5],
+					[10, 10, 20, 30, 30, 20, 10, 10],
+					[50, 50, 50, 50, 50, 50, 50, 50],
+					[70, 70, 70, 70, 70, 70, 70, 70]]
 
-	if (color == Color.WHITE):
-		multiplier = 1
-		reward = 0.1 * (find_num_moves(board, Color.WHITE) - find_num_moves(board, Color.BLACK))
-	else:
-		multiplier = -1
-		reward = 0.1 * (find_num_moves(board, Color.BLACK) - find_num_moves(board, Color.WHITE))
+	knight_table = [[-50,-40,-30,-30,-30,-30,-40,-50],
+					[-40,-20,  0,  5,  5,  0,-20,-40],
+					[-30,  5, 10, 15, 15, 10,  5,-30],
+					[-30,  0, 15, 20, 20, 15,  0,-30],
+					[-30,  5, 15, 20, 20, 15,  5,-30],
+					[-30,  0, 10, 15, 15, 10,  0,-30],
+					[-40,-20,  0,  0,  0,  0,-20,-40],
+					[-50,-40,-30,-30,-30,-30,-40,-50]]
+
+	bishop_table = [[20,-10,-10,-10,-10,-10,-10,20],
+					[-10,  5,  0,  0,  0,  0,  5,-10],
+					[-10, 10, 10, 10, 10, 10, 10,-10],
+					[-10,  0, 10, 10, 10, 10,  0,-10],
+					[-10,  5,  5, 10, 10,  5,  5,-10],
+					[-10,  0,  5, 10, 10,  5,  0,-10],
+					[-10,  0,  0,  0,  0,  0,  0,-10],
+					[20,-10,-10,-10,-10,-10,-10,20]]
+
+	rook_table = [[0,  0,  0,  5,  5,  0,  0,  0],
+					[-5,  0,  0,  0,  0,  0,  0, -5],
+					[-5,  0,  0,  0,  0,  0,  0, -5],
+					[-5,  0,  0,  0,  0,  0,  0, -5],
+					[-5,  0,  0,  0,  0,  0,  0, -5],
+					[-5,  0,  0,  0,  0,  0,  0, -5],
+					[ 5, 10, 10, 10, 10, 10, 10,  5],
+					[  0,  0,  0,  0,  0,  0,  0,  0]]
+
+	queen_table = [[-20,-10,-10, -5, -5,-10,-10,-20],
+					[-10,  0,  5,  0,  0,  0,  0,-10],
+					[-10,  5,  5,  5,  5,  5,  0,-10],
+					[  0,  0,  5,  5,  5,  5,  0, -5],
+					[ -5,  0,  5,  5,  5,  5,  0, -5],
+					[-10,  0,  5,  5,  5,  5,  0,-10],
+					[-10,  0,  0,  0,  0,  0,  0,-10],
+					[-20,-10,-10, -5, -5,-10,-10,-20]]
+
+	king_table = [[20, 30, 10,  0,  0, 10, 30, 20],
+					[ 20, 20,  0,  0,  0,  0, 20, 20],
+					[-10,-20,-20,-20,-20,-20,-20,-10],
+					[-20,-30,-30,-40,-40,-30,-30,-20],
+					[-30,-40,-40,-50,-50,-40,-40,-30],
+					[-30,-40,-40,-50,-50,-40,-40,-30],
+					[-30,-40,-40,-50,-50,-40,-40,-30],
+					[-30,-40,-40,-50,-50,-40,-40,-30]]
+
+	# reward = 0.1 * (find_num_moves(board, Color.BLACK) - find_num_moves(board, Color.WHITE))
+	reward = 0
 
 	for white in board.white_pieces:
 		if (white.piece == Pieces.KING):
-			reward += 200 * multiplier
+			reward += 200
+			reward += 0.1 * king_table[white.position[0]][white.position[1]]
 		elif (white.piece == Pieces.QUEEN):
-			reward += 9 * multiplier
+			reward += 9
+			reward += 0.03 * queen_table[white.position[0]][white.position[1]]
 		elif (white.piece == Pieces.ROOK):
-			reward += 5 * multiplier
-		elif (white.piece == Pieces.BISHOP or white.piece == Pieces.KNIGHT):
-			reward += 3 * multiplier
+			reward += 5
+			reward += 0.03 * rook_table[white.position[0]][white.position[1]]
+		elif (white.piece == Pieces.BISHOP):
+			reward += 3.3
+			reward += 0.03 * bishop_table[white.position[0]][white.position[1]]
+		elif (white.piece == Pieces.KNIGHT):
+			reward += 3.2
+			reward += 0.03 * knight_table[white.position[0]][white.position[1]]
 		elif (white.piece == Pieces.PAWN):
-			reward += 1 * multiplier
+			reward += 1
+			reward += 0.07 * pawn_table[white.position[0]][white.position[1]]
 
 	for black in board.black_pieces:
 		if (black.piece == Pieces.KING):
-			reward -= 200 * multiplier
+			reward -= 200
+			reward -= 0.1 * king_table[black.position[0]][7-black.position[1]]
 		elif (black.piece == Pieces.QUEEN):
-			reward -= 9 * multiplier
+			reward -= 9
+			reward -= 0.03 * queen_table[black.position[0]][7-black.position[1]]
 		elif (black.piece == Pieces.ROOK):
-			reward -= 5 * multiplier
-		elif (black.piece == Pieces.BISHOP or black.piece == Pieces.KNIGHT):
-			reward -= 3 * multiplier
+			reward -= 5
+			reward -= 0.03 * rook_table[black.position[0]][7-black.position[1]]
+		elif (black.piece == Pieces.BISHOP):
+			reward -= 3.3
+			reward -= 0.03 * bishop_table[black.position[0]][7-black.position[1]]
+		elif (black.piece == Pieces.KNIGHT):
+			reward -= 3.2
+			reward -= 0.03 * knight_table[black.position[0]][7-black.position[1]]
 		elif (black.piece == Pieces.PAWN):
-			reward -= 1 * multiplier
+			reward -= 1
+			reward -= 0.07 * pawn_table[black.position[0]][7-black.position[1]]
 
 	if (board.white_in_check):
-		reward += 100 * multiplier
+		reward -= 4
 
 	if (board.black_in_check):
-		reward += 100 * multiplier
+		reward += 4
 
 	if (board.is_checkmated(Color.WHITE)):
-		reward -= 10000000000 * multiplier
+		reward -= 10000000000
 
 	if (board.is_checkmated(Color.BLACK)):
-		reward -= 10000000000 * multiplier
+		reward += 10000000000
 
-	if (board.is_stalemated(Color.WHITE) or board.is_stalemated(Color.BLACK)):
-		reward = 0
+	# if (board.is_stalemated(Color.WHITE) or board.is_stalemated(Color.BLACK)):
+	# 	reward = 0
 
-	return reward
+	if (color == Color.WHITE):
+		return reward
+	else:
+		return -reward
 
-def explore_random_move(color, board):
+def explore_moves(color, board):
 	moves = []
 	if (color == Color.WHITE):
 		for piece in board.white_pieces:
@@ -200,11 +267,10 @@ def main():
 		game_over = False
 		color = Color.WHITE
 		while not game_over:
-			action = agent.choose_action(state, explore_random_move(color, board))
+			action = agent.choose_action(state, explore_moves(color, board))
 			piece = board.piece_at(*action[0])
 			f.write(str(action) + "\n")
 			next_state, reward, game_over = take_action(board, action, color)
-			reward -= 0.1 * np.sqrt(total_moves)
 			agent.train(state, action, reward, next_state)
 			state = next_state
 			total_reward += reward
