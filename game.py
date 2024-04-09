@@ -3,9 +3,9 @@ from graphics import *
 from board import *
 from enums import *
 # from neural import DQNAgent, get_current_state, explore_moves, take_action
-from minimax import find_best_move, apply_move, find_best_move_parallel
+from minimax import calculate_reward, find_best_move, apply_move, find_best_move_parallel
 import cProfile
-import yappi
+from viztracer import VizTracer
 
 
 def update_screen(win, board, curr_piece):
@@ -73,6 +73,7 @@ def main():
 	i = 0
 
 	profiler = cProfile.Profile()
+	# tracer = VizTracer()
 	while (key != 'Escape'):
 		if (curr_turn == Color.BLACK):
 			# state = get_current_state(board)
@@ -80,10 +81,14 @@ def main():
 			# next_state, reward, game_over = take_action(board, action, curr_turn)
 
 			profiler.enable()
-			move = find_best_move_parallel(board, 5, curr_turn)
+			# tracer.start()
+			move = find_best_move_parallel(board, 4, curr_turn)
+			# tracer.stop()
+			# tracer.save("result.json")
 			profiler.disable()
-			profiler.dump_stats(f'profiles/profile_data_{i+1}.prof')
+			profiler.dump_stats(f'profiles/profile_data_parallel_{i+1}.prof')
 			apply_move(board, move)
+			print(f"Black Moved. Eval: {calculate_reward(board, curr_turn)}")
 
 			if (curr_turn == Color.WHITE):
 				curr_turn = Color.BLACK
@@ -120,6 +125,7 @@ def main():
 				elif (curr_piece.results_in_check((x, y), board)):
 					continue
 				board.move(curr_piece, (x, y))
+				print(f"White Moved. Eval: {calculate_reward(board, curr_turn)}")
 				curr_piece = None
 				if (curr_turn == Color.WHITE):
 					curr_turn = Color.BLACK
@@ -140,11 +146,12 @@ def main():
 	win.close()
 
 if (__name__ == "__main__"):
-	# board = initialize_chessboard()
+	board = initialize_chessboard()
 
 	# yappi.set_clock_type("wall")
 	# yappi.start()
-	# find_best_move(board, 5, Color.WHITE)
+	
+	# find_best_move_parallel(board, 5, Color.WHITE)
 
 	# yappi.stop()
 	# yappi.get_func_stats().print_all()

@@ -1,9 +1,12 @@
+import multiprocessing.pool
 from board import *
 from piece import *
 from enums import *
 import copy
+import cProfile
 import concurrent.futures
 import multiprocessing
+
 
 def encode_state(board):
 	flattened_board = []
@@ -178,7 +181,6 @@ def game_over(board, color):
 
 def minimax(board, depth, alpha, beta, player):
 	if (depth == 0 or game_over(board, player)):
-		# print(f"Eval: {calculate_reward(board, player)}")
 		return calculate_reward(board, player)
 
 	# print(f"Minimaxing, Depth: {depth}, Color: {player}")
@@ -190,8 +192,10 @@ def minimax(board, depth, alpha, beta, player):
 	# print("After finding all legal moves")
 	# print(board)
 
+	max_eval = float('-inf')
+	if (player == Color.BLACK):
+		max_eval = float('inf')
 	if (player == Color.WHITE):
-		max_eval = float('-inf')
 		for move in legal_moves:
 			# print(f"Move: {move}, Depth: {depth}")
 
@@ -204,8 +208,10 @@ def minimax(board, depth, alpha, beta, player):
 			# print(board)
 
 			eval = minimax(board, depth - 1, alpha, beta, get_other_value(player))
+			# print(f"level: {depth}, eval: {eval}")
 			# print("I am calling undo in minimax line 207")
 			board = board.undo_last_move()
+			# print(f"level: {depth}, past undo")
 			# if (undo):
 				# board = undo
 			# print("Undo Move")
@@ -213,13 +219,16 @@ def minimax(board, depth, alpha, beta, player):
 
 
 			max_eval = max(max_eval, eval)
-			alpha = max(alpha, eval)
-
-			if (beta <= alpha):
+			# print(f"level: {depth}, max_eval: {max_eval}")
+			# print(f"alpha: {beta}")
+			# print(alpha)
+			# print(beta)
+			if (max_eval > beta.value):
+				# print("breaking")
 				break
-		return max_eval
+
+			alpha.value = max(alpha.value, eval)
 	else:
-		min_eval = float('inf')
 		for move in legal_moves:
 			# print(f"Move: {move}, Depth: {depth}")
 
@@ -232,19 +241,26 @@ def minimax(board, depth, alpha, beta, player):
 
 
 			eval = minimax(board, depth - 1, alpha, beta, get_other_value(player))
+			# print(f"level: {depth}, eval: {eval}")
 			# print("I am calling undo in minimax line 230")
 			board = board.undo_last_move()
+			# print(f"level: {depth}, past undo")
 			# if (undo):
 				# board = undo
 			# print("Undo Move")
 			# print(board)
 
-			min_eval = min(min_eval, eval)
-			beta = min(beta, eval)
-
-			if (beta <= alpha):
+			max_eval = min(max_eval, eval)
+			# print(f"level: {depth}, max_eval: {max_eval}")
+			# print(f"beta: {beta}")
+			# print(alpha)
+			# print(beta)
+			if (max_eval < alpha.value):
+				# print("breaking")
 				break
-		return min_eval
+			beta.value = min(beta.value, eval)
+	# print(f"returning: {max_eval}")
+	return max_eval
 
 def find_best_move(board, depth, color):
 	# print("Finding Best Moves")
@@ -336,28 +352,44 @@ def minimax_parallel(board, depth, alpha, beta, player, executor):
 		return min_eval
 
 def process_move_base(board, move, depth, alpha, beta, moves, color):
+	profiler = cProfile.Profile()
+	profiler.enable()
+
 	best_move = None
 	if color == Color.WHITE:
 		best_eval = float('-inf')
 	else:
 		best_eval = float('inf')
 
+
 	apply_move(board, move)
+	# print(alpha2)
+	# print(beta2)
 	eval = minimax(board, depth - 1, alpha, beta, get_other_value(color))
+	# print(eval)
 	undo = board.undo_last_move()
 	if (undo):
 		board = undo
-
 	if (color == Color.WHITE and eval > best_eval):
 		best_eval = eval
 		best_move = move
-		alpha = max(alpha, eval)
+		alpha.value = max(alpha.value, eval)
 	elif (color == Color.BLACK and eval < best_eval):
 		best_eval = eval
 		best_move = move
-		beta = min(beta, eval)
+		# print(f"beta1: {beta}")
+		beta.value = min(beta.value, eval)
+		# print(beta)
 
+	# print((best_move, best_eval))
 	moves.append((best_move, best_eval))
+	# print(moves)
+	# profiler.disable()
+	# if (not hasattr(process_move_base, "i")):
+		# process_move_base.i = 0
+	
+	# profiler.disable()
+	profiler.dump_stats(f'profiles/profile_data_parallel_indiv.prof')
 
 def find_best_move_parallel(board, depth, color):
 	# print("Finding Best Moves")
@@ -365,8 +397,6 @@ def find_best_move_parallel(board, depth, color):
 	legal_moves = explore_moves(color, board)
 
 	best_move = None
-	alpha = float('-inf')
-	beta = float('inf')
 	
 	# print(f"Legal Moves: {legal_moves}")
 
@@ -376,16 +406,23 @@ def find_best_move_parallel(board, depth, color):
 		best_eval = float('inf')
 
 	futures = []
+	workers = multiprocessing.cpu_count()
+	# print(workers)
+	pool = multiprocessing.Pool(workers)
 	moves = multiprocessing.Manager().list()
+	alpha = multiprocessing.Manager().Value('d', float('-inf'))
+	beta = multiprocessing.Manager().Value('d', float('inf'))
+	# alpha = float('-inf')
+	# beta = float('inf')
 	for move in legal_moves:
 		# print(f"Move: {move}, Depth: {depth}")
 		
-		process = multiprocessing.Process(target=process_move_base, args=(board, move, depth - 1, alpha, beta, moves, color))
-		process.start()
-		futures.append(process)
+		pool.apply_async(process_move_base, args=(board, move, depth, alpha, beta, moves, color))
 
-	for process in futures:
-		process.join()
+	pool.close()
+	pool.join()
+
+	# print(moves)
 
 	for action in moves:
 		move, eval = action
@@ -395,21 +432,6 @@ def find_best_move_parallel(board, depth, color):
 		elif (color == Color.BLACK and eval < best_eval):
 			best_eval = eval
 			best_move = move
-
-	# for move, future in zip(legal_moves, concurrent.futures.as_completed(futures)):
-	# 	board = board.undo_last_move()
-	# 	eval = future.result()
-
-	# 	if color == Color.WHITE and eval > best_eval:
-	# 		best_eval = eval
-	# 		best_move = move
-	# 		alpha = max(alpha, eval)
-	# 	elif color == Color.BLACK and eval < best_eval:
-	# 		best_eval = eval
-	# 		best_move = move
-	# 		beta = min(beta, eval)
-
-	# print(f"Best Move: {best_move}")
-	# print(f"Best Eval: {best_eval}")
-
+		# print(best_move)
+	print((best_move, best_eval))
 	return best_move
