@@ -1,49 +1,9 @@
 import chess.pgn
 import torch
 
-import numpy as np
-
 from loader import train_model
+from utils import fen_to_tensor_full
 from cnn import CNN
-
-def fen_to_tensor_full(fen: str) -> torch.Tensor:
-    piece_to_idx = {
-        'P': 0, 'N': 1, 'B': 2, 'R': 3, 'Q': 4, 'K': 5,
-        'p': 6, 'n': 7, 'b': 8, 'r': 9, 'q': 10, 'k': 11,
-    }
-
-    tensor = np.zeros((18, 8, 8), dtype=np.float32)
-    parts = fen.split()
-
-    rows = parts[0].split('/')
-    for r, row in enumerate(rows):
-        file = 0
-        for char in row:
-            if char.isdigit():
-                file += int(char)
-            else:
-                idx = piece_to_idx[char]
-                tensor[idx, r, file] = 1.0
-                file += 1
-
-    if parts[1] == 'w':
-        tensor[12, :, :] = 1.0
-    else:
-        tensor[12, :, :] = 0.0
-
-    castling = parts[2]
-    tensor[13, :, :] = 1.0 if 'K' in castling else 0.0
-    tensor[14, :, :] = 1.0 if 'Q' in castling else 0.0
-    tensor[15, :, :] = 1.0 if 'k' in castling else 0.0
-    tensor[16, :, :] = 1.0 if 'q' in castling else 0.0
-
-    ep_square = parts[3]
-    if ep_square != '-':
-        file = ord(ep_square[0]) - ord('a')
-        rank = 8 - int(ep_square[1])
-        tensor[17, rank, file] = 1.0
-
-    return torch.from_numpy(tensor)
 
 def extract_training_examples_from_pgn(file_path, max_games=1000):
     data = []

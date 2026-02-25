@@ -1,50 +1,10 @@
 import torch
 import json
 import random
-import numpy as np
 
 from loader import train_model
-from utils import flip_fen
+from utils import flip_fen, fen_to_tensor_full
 from cnn import CNN
-
-def fen_to_tensor_full(fen: str) -> torch.Tensor:
-    piece_to_idx = {
-        'P': 0, 'N': 1, 'B': 2, 'R': 3, 'Q': 4, 'K': 5,
-        'p': 6, 'n': 7, 'b': 8, 'r': 9, 'q': 10, 'k': 11,
-    }
-
-    tensor = np.zeros((18, 8, 8), dtype=np.float32)
-    parts = fen.split()
-
-    rows = parts[0].split('/')
-    for r, row in enumerate(rows):
-        file = 0
-        for char in row:
-            if char.isdigit():
-                file += int(char)
-            else:
-                idx = piece_to_idx[char]
-                tensor[idx, r, file] = 1.0
-                file += 1
-
-    if parts[1] == 'w':
-        tensor[12, :, :] = 1.0
-    else:
-        tensor[12, :, :] = 0.0
-
-    castling = parts[2]
-    tensor[13, :, :] = 1.0 if 'K' in castling else 0.0
-    tensor[14, :, :] = 1.0 if 'Q' in castling else 0.0
-    tensor[15, :, :] = 1.0 if 'k' in castling else 0.0
-    tensor[16, :, :] = 1.0 if 'q' in castling else 0.0
-
-    ep_square = parts[3]
-    if ep_square != '-':
-        file = ord(ep_square[0]) - ord('a')
-        rank = 8 - int(ep_square[1])
-        tensor[17, rank, file] = 1.0
-
-    return torch.from_numpy(tensor)
 
 def extract_from_lichess_eval_json(filepath, max_positions=50000):
     import json
@@ -107,10 +67,12 @@ def balance_eval_data(data, loss_thresh=-2500, win_thresh=2500):
     wins   = [x for x in data if x[1] > win_thresh]
 
     min_len = min(len(losses), len(draws), len(wins))
-
-    # balanced = losses[:min_len] + draws[:min_len] + wins[:min_len]
-    balanced = draws
-    print(f"Balancing dataset: using {len(balanced)} positions.")
+    if min_len == 0:
+        # Fall back to using all data if one category is empty
+        balanced = data
+    else:
+        balanced = losses[:min_len] + draws[:min_len] + wins[:min_len]
+    print(f"Balancing dataset: {len(losses)} losses, {len(draws)} draws, {len(wins)} wins -> {len(balanced)} positions.")
     random.shuffle(balanced)
     return balanced
 

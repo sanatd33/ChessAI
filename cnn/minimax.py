@@ -6,29 +6,46 @@ from chess import Board, Move
 from cnn import CNN
 from utils import fen_to_tensor_full
 
-def minimax(board: Board, depth: int, alpha: float, beta: float, model: CNN):
+def minimax(board: Board, depth: int, alpha: float, beta: float, model: CNN, maximizing: bool):
     if depth == 0 or board.is_game_over():
         with torch.no_grad():
             value = model(fen_to_tensor_full(board.fen()).to("cuda").unsqueeze(0)).item()
-            return value if board.turn == chess.WHITE else -value  # Flip for black
+            return value if board.turn == chess.WHITE else -value
 
-    max_eval = float('-inf')
-    for move in board.legal_moves:
-        board.push(move)
-        eval = minimax(board, depth - 1, alpha, beta, model)
-        board.pop()
+    # Move ordering: prioritize captures and checks for better pruning
+    moves = sorted(board.legal_moves, key=lambda m: (
+        board.is_capture(m),
+        board.gives_check(m)
+    ), reverse=True)
 
-        max_eval = max(max_eval, eval)
-        alpha = max(alpha, eval)
-        if alpha >= beta:
-            break
-
-    return max_eval
+    if maximizing:
+        max_eval = float('-inf')
+        for move in moves:
+            board.push(move)
+            eval = minimax(board, depth - 1, alpha, beta, model, False)
+            board.pop()
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:
+                break
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for move in moves:
+            board.push(move)
+            eval = minimax(board, depth - 1, alpha, beta, model, True)
+            board.pop()
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:
+                break
+        return min_eval
 
 def process_move(args):
     board, move, depth, model = args
     board.push(move)
-    eval = minimax(board, depth - 1, float('-inf'), float('inf'), model)
+    # Start with maximizing=False since we've already made our move
+    eval = minimax(board, depth - 1, float('-inf'), float('inf'), model, False)
     board.pop()
     return (move, eval)
 
